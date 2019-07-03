@@ -1,5 +1,6 @@
 package mflix.api.daos;
 
+import static com.mongodb.client.model.Aggregates.lookup;
 import static com.mongodb.client.model.Filters.all;
 import static com.mongodb.client.model.Filters.elemMatch;
 import static com.mongodb.client.model.Filters.in;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -68,14 +70,13 @@ public class MovieDao extends AbstractMFlixDao {
     }
 
     List<Bson> pipeline = new ArrayList<>();
-    // match stage to find movie
     Bson match = Aggregates.match(Filters.eq("_id", new ObjectId(movieId)));
+    Bson lookup = lookup("comments", "_id", "movie_id", "comments");
     pipeline.add(match);
-    // TODO> Ticket: Get Comments - implement the lookup stage that allows the comments to
-    // retrieved with Movies.
-    Document movie = moviesCollection.aggregate(pipeline).first();
+    pipeline.add(lookup);
+    return moviesCollection.aggregate(pipeline).first();
 
-    return movie;
+    // TODO> Ticket: Get Comments - implement the lookup stage that allows the comments to retrieved with Movies.
   }
 
   /**

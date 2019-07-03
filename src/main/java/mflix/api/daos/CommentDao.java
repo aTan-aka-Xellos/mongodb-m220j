@@ -1,6 +1,8 @@
 package mflix.api.daos;
 
 import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoCommandException;
+import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
 import com.mongodb.ReadConcern;
 import com.mongodb.client.MongoClient;
@@ -26,9 +28,14 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.combine;
+import static com.mongodb.client.model.Updates.set;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
@@ -80,11 +87,23 @@ public class CommentDao extends AbstractMFlixDao {
    */
   public Comment addComment(Comment comment) {
 
-    // TODO> Ticket - Update User reviews: implement the functionality that enables adding a new
-    // comment.
-    // TODO> Ticket - Handling Errors: Implement a try catch block to
-    // handle a potential write exception when given a wrong commentId.
-    return null;
+    if (comment.getId() == null) {
+      throw new IncorrectDaoOperation("CommentId shouldn't be null or empty");
+    }
+
+    log.info("Add comment with id: {}, email: {}", comment.getId(), comment.getEmail());
+
+    try {
+      commentCollection.insertOne(comment);
+    } catch (MongoException e) {
+      log.error("Cannot create a comment due error: {}", e.getMessage());
+      return null;
+//      throw new IncorrectDaoOperation(e.getMessage());
+    }
+
+    return comment;
+    // TODO> Ticket - Update User reviews: implement the functionality that enables adding a new comment.
+    // TODO> Ticket - Handling Errors: Implement a try catch block to handle a potential write exception when given a wrong commentId.
   }
 
   /**
@@ -102,11 +121,25 @@ public class CommentDao extends AbstractMFlixDao {
    */
   public boolean updateComment(String commentId, String text, String email) {
 
-    // TODO> Ticket - Update User reviews: implement the functionality that enables updating an
-    // user own comments
-    // TODO> Ticket - Handling Errors: Implement a try catch block to
-    // handle a potential write exception when given a wrong commentId.
-    return false;
+    UpdateResult r;
+
+    log.info("Updating comment with id: {}, email: {}, with text: {}", commentId, email, text);
+    try {
+      r = commentCollection.updateOne(
+          and(eq("_id", new ObjectId(commentId)), eq("email", email)),
+          combine(set("text", text), set("date", new Date())));
+
+      log.debug("Matched records: {}, modified records: {}", r.getMatchedCount(), r.getModifiedCount());
+
+    } catch (MongoException e) {
+      log.error("Failed to update the comment: {}", e.getMessage());
+      return false;
+    }
+
+    return r.getMatchedCount() > 0 && r.getModifiedCount() > 0;
+
+    // TODO> Ticket - Update User reviews: implement the functionality that enables updating an user own comments
+    // TODO> Ticket - Handling Errors: Implement a try catch block to handle a potential write exception when given a wrong commentId.
   }
 
   /**

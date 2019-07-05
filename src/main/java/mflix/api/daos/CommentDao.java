@@ -1,16 +1,9 @@
 package mflix.api.daos;
 
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
-import com.mongodb.MongoWriteException;
-import com.mongodb.ReadConcern;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.Aggregates;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Sorts;
-import com.mongodb.client.model.Updates;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import mflix.api.models.Comment;
@@ -18,7 +11,6 @@ import mflix.api.models.Critic;
 import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
-import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -97,8 +87,7 @@ public class CommentDao extends AbstractMFlixDao {
       commentCollection.insertOne(comment);
     } catch (MongoException e) {
       log.error("Cannot create a comment due error: {}", e.getMessage());
-      return null;
-//      throw new IncorrectDaoOperation(e.getMessage());
+      throw new IncorrectDaoOperation(e.getMessage());
     }
 
     return comment;
@@ -150,12 +139,19 @@ public class CommentDao extends AbstractMFlixDao {
    * @return true if successful deletes the comment.
    */
   public boolean deleteComment(String commentId, String email) {
-    // TODO> Ticket Delete Comments - Implement the method that enables the deletion of a user
-    // comment
+    // TODO> Ticket Delete Comments - Implement the method that enables the deletion of a user comment
     // TIP: make sure to match only users that own the given commentId
-    // TODO> Ticket Handling Errors - Implement a try catch block to
-    // handle a potential write exception when given a wrong commentId.
-    return false;
+    // TODO> Ticket Handling Errors - Implement a try catch block to handle a potential write exception when given a wrong commentId.
+
+    log.info("Deleting comment with id: {}, email: {}", commentId, email);
+    DeleteResult result;
+    try {
+      result = commentCollection.deleteOne(and(eq("_id", new ObjectId(commentId)), eq("email", email)));
+    } catch (MongoException e) {
+      log.error("Failed to delete comment: {}", e.getMessage());
+      return false;
+    }
+    return result.wasAcknowledged() && result.getDeletedCount() > 0;
   }
 
   /**

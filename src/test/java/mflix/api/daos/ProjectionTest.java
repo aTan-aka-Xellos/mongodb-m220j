@@ -33,7 +33,7 @@ public class ProjectionTest extends TicketTest {
 
   @Test
   public void testFindMoviesByCountry() {
-    int expectedSize = 2; // was 2, but dataset doesn't contains it at all
+    int expectedSize = 2;
     String country = "Kosovo";
     Iterable<Document> cursor = dao.getMoviesByCountry(country);
     int actualSize = 0;

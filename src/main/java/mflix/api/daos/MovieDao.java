@@ -2,11 +2,12 @@ package mflix.api.daos;
 
 import static com.mongodb.client.model.Aggregates.lookup;
 import static com.mongodb.client.model.Filters.all;
-import static com.mongodb.client.model.Filters.elemMatch;
 import static com.mongodb.client.model.Filters.in;
 import static com.mongodb.client.model.Projections.fields;
 import static com.mongodb.client.model.Projections.include;
-import static java.util.Arrays.asList;
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Aggregates.*;
+import static com.mongodb.client.model.Sorts.*;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
@@ -22,6 +23,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
+
+
 
 @Component
 public class MovieDao extends AbstractMFlixDao {
@@ -39,8 +43,21 @@ public class MovieDao extends AbstractMFlixDao {
 
   @SuppressWarnings("unchecked")
   private Bson buildLookupStage() {
-    return null;
+    String from = "comments";
+    String as = "comments";
 
+    Variable<String> let = new Variable<>("id", "$_id");
+
+    Document eq = Document.parse("{'$eq':['$movie_id','$$id']}");
+    Bson match = match( expr ( eq ));
+    Bson sort = sort( descending("date")); //fix from forum
+
+    return lookup(
+      from,                       //from
+      Arrays.asList(let),         //let
+      Arrays.asList(match, sort), //pipeline
+      as                          //as
+    );
   }
 
   /**
@@ -54,7 +71,8 @@ public class MovieDao extends AbstractMFlixDao {
     //TODO> Ticket: Handling Errors - implement a way to catch a
     //any potential exceptions thrown while validating a movie id.
     //Check out this method's use in the method that follows.
-    return true;
+
+    return Objects.nonNull(movieId) && ObjectId.isValid(movieId);
   }
 
   /**
@@ -71,7 +89,7 @@ public class MovieDao extends AbstractMFlixDao {
 
     List<Bson> pipeline = new ArrayList<>();
     Bson match = Aggregates.match(Filters.eq("_id", new ObjectId(movieId)));
-    Bson lookup = lookup("comments", "_id", "movie_id", "comments");
+    Bson lookup = buildLookupStage();
     pipeline.add(match);
     pipeline.add(lookup);
     return moviesCollection.aggregate(pipeline).first();

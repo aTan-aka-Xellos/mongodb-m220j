@@ -279,13 +279,14 @@ public class MoviesService {
   public boolean addMovieComment(
       String movieId, String email, String text, HashMap<String, Object> results) {
 
-    Comment newComment = new Comment();
     User user = userDao.getUser(email);
     if (user == null){
       results.put("error", MessageFormat.format("not able to add comment " +
               "for `{0}` email. Not a valid user email", email));
       return false;
     }
+
+    Comment newComment = new Comment();
     newComment.setOid(new ObjectId());
     newComment.setMovieId(movieId);
     newComment.setEmail(email);
